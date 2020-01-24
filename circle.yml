@@ -20,6 +20,7 @@ workflows:
             - next-linux-clang8-release
             - next-linux-gcc8-release
             - next-macos-xcode11-release
+            - next-ios-render-test-runner
       - next-build-template:
           name: next-android-armeabi-v7a-release
           executor_name: ubuntu-disco
@@ -769,6 +770,12 @@ jobs:
               xcparse attachments *.xcresult && ls
               cd ../.. && mkdir -p /tmp/tests/ios-render-test
               if ls render-test-app/TestLogs/*.html 1> /dev/null 2>&1; then cp render-test-app/TestLogs/*.html /tmp/tests/ios-render-test; fi
+              if [[ -n $(ls render-test-app/TestLogs/*.zip 2>/dev/null) ]]; then
+                cp render-test-app/TestLogs/*.zip metrics/next-ios-render-test-runner/
+                cd metrics/next-ios-render-test-runner/
+                unzip *.zip
+                rm -rf *.zip
+              fi
             fi
       - next-save
   next-android-benchmark-runner:

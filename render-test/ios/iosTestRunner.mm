@@ -2,6 +2,8 @@
 
 #include "ios_test_runner.hpp"
 
+#import "ZipArchive/ZipArchive.h"
+
 #include <string>
 
 @interface IosTestRunner ()
@@ -76,8 +78,8 @@
 
             std::string basePath = std::string([path UTF8String]);
             self.testStatus = self.runner->startTest(basePath) ? YES : NO;
-            self.styleResultPath =  [path stringByAppendingPathComponent:@"/next-ios-render-test-runner-style.html"];
-            self.metricResultPath =  [path stringByAppendingPathComponent:@"/next-ios-render-test-runner-metrics.html"];
+            self.styleResultPath = [path stringByAppendingPathComponent:@"/next-ios-render-test-runner-style.html"];
+            self.metricResultPath = [path stringByAppendingPathComponent:@"/next-ios-render-test-runner-metrics.html"];
 
             BOOL fileFound = [fileManager fileExistsAtPath: self.styleResultPath];
             if (fileFound == NO) {
@@ -89,6 +91,49 @@
             if (fileFound == NO) {
                 NSLog(@"Metric test result file '%@' doese not exit ", self.metricResultPath);
                 self.testStatus = NO;
+            }
+
+            NSString *docDirectory = [path stringByAppendingPathComponent:@"/baselines"];
+            fileFound = [fileManager fileExistsAtPath: docDirectory];
+            if (!fileFound) {
+                NSLog(@"Metric path '%@' doese not exit ", docDirectory);
+            }
+            BOOL isDir = NO;
+            NSArray *subpaths = [[NSArray alloc] init];;
+            NSString *exportPath = docDirectory;
+            if ([fileManager fileExistsAtPath:exportPath isDirectory: &isDir] && isDir){
+                subpaths = [fileManager subpathsAtPath:exportPath];
+            }
+            else {
+                NSLog(@"Failed to find the archive sub directory");
+            }
+            NSString *archivePath = [docDirectory stringByAppendingString:@"/metrics.zip"];
+            ZipArchive *archiver = [[ZipArchive alloc] init];
+            BOOL archived = NO;
+            if (archiver) {
+                [archiver CreateZipFile2:archivePath];
+                for(NSString *path in subpaths)
+                {
+                    NSString *longPath = [exportPath stringByAppendingPathComponent:path];
+                    if([fileManager fileExistsAtPath:longPath isDirectory:&isDir] && !isDir)
+                    {
+                        [archiver addFileToZip:longPath newname:path];
+                        archived = YES;
+                    }
+                }
+                if (archived) {
+                    if([archiver CloseZipFile2]) {
+                        NSLog(@"Successfully archive all of the metrics into metrics.zip");
+                        self.metricPath =  [path stringByAppendingPathComponent:@"/baselines/metrics.zip"];
+                    }
+                    else {
+                        NSLog(@"Failed to archive rebaselined metrics into metrics.zip");
+                    }
+                } else {
+                    NSLog(@"No rebaselined metrics are found");
+                }
+            } else {
+                NSLog(@"Failed to create rebaselined metrics archiver");
             }
         }
 
@@ -104,6 +149,10 @@
 
 - (NSString*) getMetricResultPath {
    return self.metricResultPath;
+}
+
+- (NSString*) getMetricPath {
+  return self.metricPath;
 }
 
 - (BOOL) getTestStatus {
