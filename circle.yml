@@ -93,6 +93,7 @@ workflows:
           name: next-linux-tsan
           executor_name: ubuntu-disco
           target_is_linux: true
+          update_packages: true
           requires:
             - next-sanity-checks
           config_params: '-G Ninja -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER=clang-8 -DCMAKE_CXX_COMPILER=clang++-8 -DMBGL_WITH_SANITIZER=thread'
@@ -976,6 +977,9 @@ jobs:
       style_tests:
         type: boolean
         default: false
+      update_packages:
+        type: boolean
+        default: false
     executor: << parameters.executor_name >>
     steps:
       - checkout
@@ -992,6 +996,12 @@ jobs:
           steps:
             - next-prepare
             - next-prepare-linux
+            - when:
+                condition: << parameters.update_packages >>
+                steps:
+                  - run:
+                      name: Run apt upgrade
+                      command: apt update && apt upgrade -y
             - next-config:
                 config_params: << parameters.config_params >>
             - next-build:
